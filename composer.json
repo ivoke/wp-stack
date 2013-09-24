@@ -1,6 +1,5 @@
 {
     "name": "ivoke/wp-stack",
-    "type": "agl-module",
     "require": {
         "composer/installers": "~1.0"
     }
