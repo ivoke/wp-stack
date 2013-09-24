@@ -2,7 +2,7 @@
 set :user, "deploy"
 set :use_sudo, false
 set :deploy_via, :remote_cache
-set :copy_exclude, [".git", ".gitmodules", ".DS_Store", ".gitignore", "*.md", "*.sample", "cap"]
+set :copy_exclude, %w(.git .gitmodules .DS_Store .gitignore *.md *.sample cap composer.json composer.lock)
 set :keep_releases, 5
 
 #after "deploy:setup", "deploy:setup_config"
