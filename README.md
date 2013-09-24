@@ -1,6 +1,6 @@
 # WP Stack
 
-This is an adaption of [markjaquith's great WordPress-Skeleton](https://github.com/markjaquith/WordPress-Skeleton) for Mittwald hosting environments
+This is an adaption of [markjaquith's wp-stack](https://github.com/markjaquith/wp-stack) for Mittwald hosting environments
 
 * deploy via copy, meaning no ssh tools need to be available on the production shell.
 * relative file linking, mittwalds' apache config does not allow absolute linkage.
