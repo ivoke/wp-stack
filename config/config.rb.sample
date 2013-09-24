@@ -1,15 +1,17 @@
 # Customize this file, and then rename it to config.rb
 
-set :application, "WP Stack Site"
-set :repository,  "set your git repository location here"
+set :application, "app name"
+set :deploy_via, :copy
+set :check_revision, false
 set :scm, :git
-# Or: `accurev`, `bzr`, `cvs`, `darcs`, `git`, `mercurial`, `perforce`, `subversion` or `none`
+
+set :repository, "../"
 
 # Using Git Submodules?
 set :git_enable_submodules, 1
 
 # This should be the same as :deploy_to in production.rb
-set :production_deploy_to, '/srv/www/example.com'
+set :production_deploy_to, '/html'
 
 # The domain name used for your staging environment
 set :staging_domain, 'staging.example.com'

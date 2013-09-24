@@ -1,9 +1,8 @@
-# This file is only loaded for the production environment
-# Customize it and rename it as production.rb
+# This file is only loaded for the staging environment
+# Customize it and rename it as staging.rb
 
 # Where should the site deploy to?
-set :deploy_to, "/srv/www/example.com"
-
+set :deploy_to, "localhost"
 # Now configure the servers for this environment
 
 # OPTION 1

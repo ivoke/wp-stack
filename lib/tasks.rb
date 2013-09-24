@@ -1,10 +1,11 @@
 namespace :shared do
-	task :make_shared_dir do
-		run "if [ ! -d #{shared_path}/files ]; then mkdir #{shared_path}/files; fi"
+	task :make_shared_dirs do
+		run "if [ ! -d #{shared_path}/media ]; then mkdir #{shared_path}/media; fi"
+		run "if [ ! -d #{shared_path}/config ]; then mkdir #{shared_path}/config; fi"
 	end
 	task :make_symlinks do
-		run "if [ ! -h #{release_path}/shared ]; then ln -s #{shared_path}/files/ #{release_path}/shared; fi"
-		run "for p in `find -L #{release_path} -type l`; do t=`readlink $p | grep -o 'shared/.*$'`; sudo mkdir -p #{release_path}/$t; sudo chown www-data:www-data #{release_path}/$t; done"
+		run "if [ ! -h #{current_path}/content/media ]; then ln -s ../../../shared/media #{current_path}/content/media; fi"
+		run "if [ ! -h #{current_path}/env_#{stage}.php ]; then ln -s ../../shared/config/env_#{stage}.php #{current_path}/env_#{stage}.php; fi"
 	end
 end
 
@@ -45,25 +46,22 @@ end
 
 namespace :db do
 	desc "Syncs the staging database (and uploads) from production"
-	task :sync, :roles => :web	do
-		if stage != :staging then
-			puts "[ERROR] You must run db:sync from staging with cap staging db:sync"
-		else
-			puts "Hang on... this might take a while."
-			random = rand( 10 ** 5 ).to_s.rjust( 5, '0' )
-			p = wpdb[ :production ]
-			s = wpdb[ :staging ]
-			puts "db:sync"
-			puts stage
-			system "mysqldump -u #{p[:user]} --result-file=/tmp/wpstack-#{random}.sql -h #{p[:host]} -p#{p[:password]} #{p[:name]}"
-			system "mysql -u #{s[:user]} -h #{s[:host]} -p#{s[:password]} #{s[:name]} < /tmp/wpstack-#{random}.sql && rm /tmp/wpstack-#{random}.sql"
-			puts "Database synced to staging"
-			# memcached.restart
-			puts "Memcached flushed"
-			# Now to copy files
-			find_servers( :roles => :web ).each do |server|
-				system "rsync -avz --delete #{production_deploy_to}/shared/files/ #{server}:#{shared_path}/files/"
-			end
+	task :sync_from_production, :roles => :web	do
+		puts "Hang on... this might take a while."
+		random = rand( 10 ** 5 ).to_s.rjust( 5, '0' )
+		p = wpdb[ :production ]
+		s = wpdb[ :staging ]
+		puts "db:sync"
+		puts stage
+		system "mysqldump -u #{p[:user]} --result-file=/tmp/wpstack-#{random}.sql -h #{p[:host]} -p#{p[:password]} #{p[:name]}"
+		puts "mysql -u #{s[:user]} -h #{s[:host]} -p#{s[:password]} #{s[:name]} < /tmp/wpstack-#{random}.sql && rm /tmp/wpstack-#{random}.sql"
+		system "mysql -u #{s[:user]} -h #{s[:host]} -p#{s[:password]} #{s[:name]} < /tmp/wpstack-#{random}.sql && rm /tmp/wpstack-#{random}.sql"
+
+		puts "Database synced to staging"
+
+		# Now to copy files
+		find_servers( :roles => :web ).each do |server|
+			system "rsync -avz --delete #{production_deploy_to}/shared/media/ #{server}:#{shared_path}/files/"
 		end
 	end
 	desc "Sets the database credentials (and other settings) in wp-config.php"
@@ -73,4 +71,41 @@ namespace :db do
 			run "sed -i 's/#{k}/#{v}/' #{release_path}/wp-config.php", :roles => :web
 		end
 	end
+end
+
+namespace :deploy do
+  task :setup_config, roles: :app do
+    run "mkdir -p #{shared_path}/config"
+    run "mkdir -p #{shared_path}/media"
+
+    put "#{repository_path}/env_local.php.sample", "#{shared_path}/config/env_#{stage}.php"
+
+    put "RewriteEngine On\nRewriteRule (.*) current/$1", "#{deploy_to}/.htaccess"
+
+    puts "Now edit the config files in #{shared_path}."
+  end
+
+end
+
+require "pathname"
+
+namespace :deploy do
+  task :create_symlink, :except => { :no_release => true } do
+    deploy_to_pathname = Pathname.new(deploy_to)
+
+    on_rollback do
+      if previous_release
+        previous_release_pathname = Pathname.new(previous_release)
+        relative_previous_release = previous_release_pathname.relative_path_from(deploy_to_pathname)
+        run "rm -f #{current_path}; ln -s #{relative_previous_release} #{current_path}; true"
+      else
+        logger.important "no previous release to rollback to, rollback of symlink skipped"
+      end
+    end
+
+    latest_release_pathname = Pathname.new(latest_release)
+    relative_latest_release = latest_release_pathname.relative_path_from(deploy_to_pathname)
+    run "rm -f #{current_path} && ln -s #{relative_latest_release} #{current_path}"
+    run ""
+  end
 end
