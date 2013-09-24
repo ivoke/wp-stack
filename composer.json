@@ -1,0 +1,9 @@
+{
+  {
+    "name": "ivoke/wp-stack",
+    "type": "wp-stack",
+    "version": "0.0.1"
+    "require": {
+        "composer/installers": "~1.0"
+    }
+}
