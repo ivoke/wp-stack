@@ -5,7 +5,8 @@ set :deploy_via, :copy
 set :check_revision, false
 set :scm, :git
 
-set :repository, "../"
+set :repository, File.expand_path("..")
+
 
 # Using Git Submodules?
 set :git_enable_submodules, 1
