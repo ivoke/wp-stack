@@ -78,9 +78,8 @@ namespace :deploy do
     run "mkdir -p #{shared_path}/config"
     run "mkdir -p #{shared_path}/media"
 
-    put "#{repository_path}/env_local.php.sample", "#{shared_path}/config/env_#{stage}.php"
-
-    put "RewriteEngine On\nRewriteRule (.*) current/$1", "#{deploy_to}/.htaccess"
+    put "", "#{shared_path}/config/env_#{stage}.php"
+    put "RewriteEngine On\nRewriteRule (.*) current/$1\n", "#{deploy_to}/.htaccess"
 
     puts "Now edit the config files in #{shared_path}."
   end
