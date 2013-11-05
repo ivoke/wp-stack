@@ -95,8 +95,7 @@ end
 namespace :deploy do
   task :setup_config, roles: :app do
     put "#{repository_path}/env_local.php.sample", "#{shared_path}/config/env_#{stage}.php"
-
-    put "RewriteEngine On\nRewriteRule (.*) current/$1", "#{deploy_to}/.htaccess"
+    put "RewriteEngine On\nRewriteRule (.*) current/$1\n", "#{deploy_to}/.htaccess"
 
     puts "Now edit the config files in #{shared_path}."
   end
