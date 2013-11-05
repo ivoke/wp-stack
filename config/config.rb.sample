@@ -32,6 +32,12 @@ set :wpdb do
 			:user     => 'STAGING DB USER',
 			:password => 'STAGING DB PASS',
 			:name     => 'STAGING DB NAME',
+		},
+		:development => {
+			:host     => 'STAGING DB HOST',
+			:user     => 'STAGING DB USER',
+			:password => 'STAGING DB PASS',
+			:name     => 'STAGING DB NAME',
 		}
 	}
 end
