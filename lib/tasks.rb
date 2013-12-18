@@ -45,43 +45,26 @@ namespace :memcached do
 end
 
 namespace :db do
-  desc "Syncs the staging database (and uploads) from production"
 
+  desc "Syncs the staging database (and uploads) from production"
   task :sync_from_production, :roles => :web  do
     puts "Hang on... this might take a while."
-    sync(wpdb[ :production ], wpdb[ :development ])
+    random = rand( 10 ** 5 ).to_s.rjust( 5, '0' )
+    p = wpdb[ :production ]
+    s = wpdb[ :staging ]
+    puts "Syncing database"
+    puts stage
+    system "mysqldump -u #{p[:user]} --result-file=/tmp/wpstack-#{random}.sql -h #{p[:host]} -p#{p[:password]} #{p[:name]}"
+    system "mysql -u #{s[:user]} -h #{s[:host]} -p#{s[:password]} #{s[:name]} < /tmp/wpstack-#{random}.sql && rm /tmp/wpstack-#{random}.sql"
+
     puts "Database synced to staging"
 
     # Now to copy files
     find_servers( :roles => :web ).each do |server|
-      system "scp -rp #{server}:#{production_deploy_to}/shared/media ../content/"
+      puts "Syncing files"
+      system "rsync -avz --delete -e ssh #{server}:#{production_deploy_to}/shared/media/ ../content/media/"
     end
   end
-
-  task :sync_from_staging, :roles => :web  do
-    puts "Hang on... this might take a while."
-    sync(wpdb[ :staging ], wpdb[ :development ])
-    puts "Database synced to staging"
-
-    # Now to copy files
-    find_servers( :roles => :web ).each do |server|
-      system "scp -rp #{server}:#{staging_deploy_to}/shared/media ../content/"
-    end
-  end
-
-  def sync(source, destination)
-    timestamp = Time.now.to_i
-    source_bk_file = "/tmp/wpstack-#{source[:host]}-#{timestamp}.sql"
-    dest_bk_file = "/tmp/wpstack-#{destination[:host]}-#{timestamp}.sql"
-
-    system "mysqldump -u #{source[:user]} --result-file=#{source_bk_file} -h #{source[:host]} -p#{source[:password]} #{source[:name]}"
-
-    system "mysqldump -u #{destination[:user]} --result-file=#{dest_bk_file} -h #{destination[:host]} -p#{destination[:password]} #{destination[:name]}"
-
-    system "mysql -u #{destination[:user]} -h #{destination[:host]} -p#{destination[:password]} #{destination[:name]} < #{source_bk_file}"
-  end
-
-
 
   desc "Sets the database credentials (and other settings) in wp-config.php"
   task :make_config do
@@ -93,8 +76,11 @@ namespace :db do
 end
 
 namespace :deploy do
-  task :setup_config, roles: :app do
-    put "#{repository_path}/env_local.php.sample", "#{shared_path}/config/env_#{stage}.php"
+  task :setup_config, roles: :web do
+    run "mkdir -p #{shared_path}/config"
+    run "mkdir -p #{shared_path}/media"
+
+    put "", "#{shared_path}/config/env_#{stage}.php"
     put "RewriteEngine On\nRewriteRule (.*) current/$1\n", "#{deploy_to}/.htaccess"
 
     puts "Now edit the config files in #{shared_path}."
