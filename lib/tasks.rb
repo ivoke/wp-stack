@@ -5,21 +5,9 @@ namespace :shared do
   end
   task :make_symlinks do
     run "if [ ! -h #{current_path}/content/media ]; then ln -s ../../../shared/media #{current_path}/content/media; fi"
-    run "if [ ! -h #{current_path}/env_#{stage}.php ]; then ln -s ../../shared/config/env_#{stage}.php #{current_path}/env_#{stage}.php; fi"
-  end
-end
-
-namespace :nginx do
-  desc "Restarts nginx"
-  task :restart do
-    run "sudo /etc/init.d/nginx reload"
-  end
-end
-
-namespace :phpfpm do
-  desc" Restarts PHP-FPM"
-  task :restart do
-    run "sudo /etc/init.d/php-fpm restart"
+    run "rm #{current_path}/wp-config.php && cp #{shared_path}/config/wp-config.php #{current_path}/wp-config.php"
+    run "rm #{current_path}/robots.txt && cp #{shared_path}/config/robots.txt #{current_path}/robots.txt"
+    run "rm #{current_path}/.htaccess && cp #{shared_path}/config/htaccess #{current_path}/.htaccess"
   end
 end
 
@@ -30,49 +18,60 @@ namespace :git do
   end
 end
 
-namespace :memcached do
-  desc "Restarts Memcached"
-  task :restart do
-    run "echo 'flush_all' | nc localhost 11211", :roles => [:memcached]
-  end
-  desc "Updates the pool of memcached servers"
-  task :update do
-    unless find_servers( :roles => :memcached ).empty? then
-      mc_servers = '<?php return array( "' + find_servers( :roles => :memcached ).join( ':11211", "' ) + ':11211" ); ?>'
-      run "echo '#{mc_servers}' > #{current_path}/memcached.php", :roles => :memcached
-    end
-  end
-end
-
 namespace :db do
-
-  desc "Syncs the staging database (and uploads) from production"
-  task :sync_from_production, :roles => :web  do
+  desc "Syncs the staging database (and uploads)"
+  task :sync, :roles => :web  do
     puts "Hang on... this might take a while."
-    random = rand( 10 ** 5 ).to_s.rjust( 5, '0' )
-    p = wpdb[ :production ]
-    s = wpdb[ :staging ]
-    puts "Syncing database"
-    puts stage
-    system "mysqldump -u #{p[:user]} --result-file=/tmp/wpstack-#{random}.sql -h #{p[:host]} -p#{p[:password]} #{p[:name]}"
-    system "mysql -u #{s[:user]} -h #{s[:host]} -p#{s[:password]} #{s[:name]} < /tmp/wpstack-#{random}.sql && rm /tmp/wpstack-#{random}.sql"
-
-    puts "Database synced to staging"
+    puts "Syncing database from #{stage} to local"
+    sync_database(wp[ stage.to_sym ], wp[:local])
 
     # Now to copy files
     find_servers( :roles => :web ).each do |server|
       puts "Syncing files"
-      system "rsync -avz --delete -e ssh #{server}:#{production_deploy_to}/shared/media/ ../content/media/"
+      system "rsync -avz --delete -e ssh #{server}:#{deploy_to}/shared/media/ ../content/media/"
     end
   end
 
-  desc "Sets the database credentials (and other settings) in wp-config.php"
-  task :make_config do
-    set :staging_domain, '' if staging_domain.nil?
-    {:'%%WP_STAGING_DOMAIN%%' => staging_domain, :'%%WP_STAGE%%' => stage, :'%%DB_NAME%%' => wpdb[stage][:name], :'%%DB_USER%%' => wpdb[stage][:user], :'%%DB_PASSWORD%%' => wpdb[stage][:password], :'%%DB_HOST%%' => wpdb[stage][:host]}.each do |k,v|
-      run "sed -i 's/#{k}/#{v}/' #{release_path}/wp-config.php", :roles => :web
+  def sync_database from, to
+    random = rand( 10 ** 5 ).to_s.rjust( 5, '0' )
+
+    # dump database
+    system "mysqldump -u #{from[:db][:user]} --result-file=/tmp/wpstack-#{random}.sql -h #{from[:db][:host]} -p#{from[:db][:password]} #{from[:db][:name]}"
+
+    # load database dump
+    system "mysql -u #{to[:db][:user]} -h #{to[:db][:host]} -p#{to[:db][:password]} #{to[:db][:name]} < /tmp/wpstack-#{random}.sql && rm /tmp/wpstack-#{random}.sql"
+
+    # change table prefixes if they don't match
+    if to[:wp][:table_prefix] != from[:wp][:table_prefix]
+      tables = run_locally <<-eos
+        mysql -u #{to[:db][:user]} -h #{to[:db][:host]} -p#{to[:db][:password]} #{to[:db][:name]} <<< "SELECT GROUP_CONCAT(TABLE_NAME) FROM  information_schema.Tables WHERE TABLE_SCHEMA = '#{to[:db][:name]}';"
+      eos
+
+      tables = tables.split("\n")[1].split(',')
+
+      cmd = "RENAME TABLE "
+      tables.each do |table|
+        base_name = table.sub(from[:wp][:table_prefix], '')
+        cmd += "#{table} TO #{to[:wp][:table_prefix]}#{base_name},"
+      end
+
+      cmd = "#{cmd[0,cmd.length-1]};"
+
+      run_locally <<-eos
+        mysql -u #{to[:db][:user]} -h #{to[:db][:host]} -p#{to[:db][:password]} #{to[:db][:name]} <<< "#{cmd}"
+      eos
     end
+
+    if multisite
+      # update multisite config
+      run_locally <<-eos
+        mysql -u #{to[:db][:user]} -h #{to[:db][:host]} -p#{to[:db][:password]} #{to[:db][:name]} <<< "UPDATE #{to[:wp][:table_prefix]}blogs SET domain='#{to[:wp][:host]}';"
+        mysql -u #{to[:db][:user]} -h #{to[:db][:host]} -p#{to[:db][:password]} #{to[:db][:name]} <<< "UPDATE #{to[:wp][:table_prefix]}site SET domain='#{to[:wp][:host]}';"
+      eos
+    end
+
   end
+
 end
 
 namespace :deploy do
@@ -80,8 +79,10 @@ namespace :deploy do
     run "mkdir -p #{shared_path}/config"
     run "mkdir -p #{shared_path}/media"
 
-    put "", "#{shared_path}/config/env_#{stage}.php"
     put "RewriteEngine On\nRewriteRule (.*) current/$1\n", "#{deploy_to}/.htaccess"
+    put "", "#{shared_path}/config/htaccess"
+    put "", "#{shared_path}/config/robots.txt"
+    put "", "#{shared_path}/config/wp-config.php"
 
     puts "Now edit the config files in #{shared_path}."
   end
@@ -108,5 +109,31 @@ namespace :deploy do
     relative_latest_release = latest_release_pathname.relative_path_from(deploy_to_pathname)
     run "rm -f #{current_path} && ln -s #{relative_latest_release} #{current_path}"
     run ""
+  end
+end
+
+require 'fileutils'
+
+namespace :deploy do
+  task :build do
+
+    versioned_files = [
+      'assets/css/main.min.css',
+      'assets/js/scripts.min.js',
+      'lib/scripts.php'
+    ]
+
+    FileUtils.cd "../content/themes/#{theme}" do
+      system("grunt build")
+      versioned_files.each do |file|
+        system("git add #{file}")
+      end
+      system("git commit -m 'built files for production'")
+    end
+  end
+
+  task :build_cleanup do
+    system("git reset --merge HEAD~1")
+    system("git checkout ../content/themes/#{theme}/assets/css/main.css")
   end
 end

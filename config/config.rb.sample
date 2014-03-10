@@ -17,29 +17,49 @@ set :production_deploy_to, '/html'
 # The domain name used for your staging environment
 set :staging_domain, 'staging.example.com'
 
+
+set :multisite, false
+set :theme, 'roots'
+
 # Database
 # Set the values for host, user, pass, and name for both production and staging.
-set :wpdb do
-	{
-		:production => {
-			:host     => 'PRODUCTION DB HOST',
-			:user     => 'PRODUCTION DB USER',
-			:password => 'PRODUCTION DB PASS',
-			:name     => 'PRODUCTION DB NAME',
-		},
-		:staging => {
-			:host     => 'STAGING DB HOST',
-			:user     => 'STAGING DB USER',
-			:password => 'STAGING DB PASS',
-			:name     => 'STAGING DB NAME',
-		},
-		:development => {
-			:host     => 'STAGING DB HOST',
-			:user     => 'STAGING DB USER',
-			:password => 'STAGING DB PASS',
-			:name     => 'STAGING DB NAME',
-		}
-	}
+set :wp do
+  {
+    :production => {
+      :db => {
+        :host     => '',
+        :user     => '',
+        :password => '',
+        :name     => '',
+      },
+      :wp => {
+        :host     => '',
+        :table_prefix   => '',
+      }
+    },
+    :staging => {
+      :db => {
+        :host     => '',
+        :user     => '',
+        :password => '',
+        :name     => '',
+      },
+      :wp => {
+        :host     => '',
+        :table_prefix   => '',
+      }
+    },
+    :local => {
+      :db => {
+        :host     => 'localhost',
+        :user     => '',
+        :password => '',
+        :name     => '',
+      },
+      :wp => {
+        :host     => '',
+        :table_prefix   => '',
+      }
+    }
+  }
 end
-
-# You're not done! You must also configure production.rb and staging.rb
