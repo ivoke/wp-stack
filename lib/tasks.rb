@@ -123,6 +123,7 @@ namespace :deploy do
       'lib/scripts.php'
     ]
 
+    @last_commit = run_locally("git rev-parse HEAD")
     FileUtils.cd "../content/themes/#{theme}" do
       system("grunt build")
       versioned_files.each do |file|
@@ -133,7 +134,7 @@ namespace :deploy do
   end
 
   task :build_cleanup do
-    system("git reset --merge HEAD~1")
+    system("git reset --merge #{@last_commit}")
     system("git checkout ../content/themes/#{theme}/assets/css/main.css")
   end
 end
