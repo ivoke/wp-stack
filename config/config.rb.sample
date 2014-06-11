@@ -51,10 +51,10 @@ set :wp do
     },
     :local => {
       :db => {
-        :host     => 'localhost',
-        :user     => '',
-        :password => '',
-        :name     => '',
+        :host     => '192.168.33.10',
+        :user     => 'skeleton',
+        :password => 'secret',
+        :name     => 'skeleton',
       },
       :wp => {
         :host     => '',
