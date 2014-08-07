@@ -8,7 +8,7 @@ set :deploy_to, "/html"
 
 # OPTION 1
 
-role :web, "your webserver"
+role :web, "p234541@p234541.webspaceconfig.de"
 # role :web, "second web server here"
 # role :web, "third web server here, etc"
 

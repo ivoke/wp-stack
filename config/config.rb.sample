@@ -27,14 +27,14 @@ set :wp do
   {
     :production => {
       :db => {
-        :host     => '',
-        :user     => '',
+        :host     => 'db1166.mydbserver.com',
+        :user     => 'p234541d1',
         :password => '',
-        :name     => '',
+        :name     => 'usr_p234541_1',
       },
       :wp => {
         :host     => '',
-        :table_prefix   => '',
+        :table_prefix   => 'castik_',
       }
     },
     :staging => {
