@@ -35,6 +35,8 @@ namespace :db do
   def sync_database from, to
     random = rand( 10 ** 5 ).to_s.rjust( 5, '0' )
 
+    default_run_options[:shell] = '/bin/bash'
+
     # dump database
     system "mysqldump -u #{from[:db][:user]} --result-file=/tmp/wpstack-#{random}.sql -h #{from[:db][:host]} -p#{from[:db][:password]} #{from[:db][:name]}"
 
@@ -62,20 +64,18 @@ namespace :db do
       eos
     end
 
-    if multisite
-      # update multisite config
-      run_locally <<-eos
-        mysql -u #{to[:db][:user]} -h #{to[:db][:host]} -p#{to[:db][:password]} #{to[:db][:name]} <<< "UPDATE #{to[:wp][:table_prefix]}blogs SET domain='#{to[:wp][:host]}';"
-        mysql -u #{to[:db][:user]} -h #{to[:db][:host]} -p#{to[:db][:password]} #{to[:db][:name]} <<< "UPDATE #{to[:wp][:table_prefix]}site SET domain='#{to[:wp][:host]}';"
-      eos
-    end
+    # update multisite config
+    #run_locally <<-eos
+    run_locally "mysql -u #{to[:db][:user]} -h #{to[:db][:host]} -p#{to[:db][:password]} #{to[:db][:name]} <<< \"UPDATE #{to[:wp][:table_prefix]}blogs SET domain='#{to[:wp][:host]}';\""
+    run_locally "mysql -u #{to[:db][:user]} -h #{to[:db][:host]} -p#{to[:db][:password]} #{to[:db][:name]} <<< \"UPDATE #{to[:wp][:table_prefix]}site SET domain='#{to[:wp][:host]}';\""
+    #eos
 
   end
 
 end
 
 namespace :deploy do
-  task :setup_config, roles: :web do
+  task :setup_config, :roles => :web do
     run "mkdir -p #{shared_path}/config"
     run "mkdir -p #{shared_path}/media"
 
