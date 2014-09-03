@@ -1,10 +1,12 @@
 namespace :shared do
   task :make_shared_dirs do
     run "if [ ! -d #{shared_path}/media ]; then mkdir #{shared_path}/media; fi"
+    run "if [ ! -d #{shared_path}/plugins ]; then mkdir #{shared_path}/plugins; fi"
     run "if [ ! -d #{shared_path}/config ]; then mkdir #{shared_path}/config; fi"
   end
   task :make_symlinks do
     run "if [ ! -h #{current_path}/content/media ]; then ln -s ../../../shared/media #{current_path}/content/media; fi"
+    run "if [ ! -h #{current_path}/content/plugins ]; then ln -s ../../../shared/plugins #{current_path}/content/plugins; fi"
     run "rm #{current_path}/wp-config.php && cp #{shared_path}/config/wp-config.php #{current_path}/wp-config.php"
     run "rm #{current_path}/robots.txt && cp #{shared_path}/config/robots.txt #{current_path}/robots.txt"
     run "rm #{current_path}/.htaccess && cp #{shared_path}/config/htaccess #{current_path}/.htaccess"
