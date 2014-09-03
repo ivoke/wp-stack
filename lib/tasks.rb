@@ -141,3 +141,18 @@ namespace :deploy do
     system("git checkout ../content/themes/#{theme}/assets/css/main.css")
   end
 end
+
+namespace :plugins do
+  task :sync do
+    find_servers( :roles => :web ).each do |server|
+      puts "Syncing plugins"
+      system "rsync -avz --delete -e ssh #{server}:#{deploy_to}/shared/plugins/ ../content/plugins/"
+    end
+  end
+  task :push do
+    find_servers( :roles => :web ).each do |server|
+      puts "Pushing plugins"
+      system "rsync -avz --delete -e ssh ../content/plugins/ #{server}:#{deploy_to}/shared/plugins/"
+    end
+  end
+end
