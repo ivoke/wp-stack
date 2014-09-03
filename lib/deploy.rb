@@ -1,7 +1,7 @@
 set :user, "deploy"
 set :use_sudo, false
 set :deploy_via, :remote_cache
-set :copy_exclude, %w(.git .vagrant .gitmodules .DS_Store .gitignore *.md *.sample cap composer.* tools)
+set :copy_exclude, %w(.git .vagrant .gitmodules .DS_Store .gitignore *.md *.sample cap composer.* tools /content/plugins /content/media)
 set :keep_releases, 5
 
 before "deploy", "deploy:build"
