@@ -80,6 +80,7 @@ namespace :deploy do
   task :setup_config, :roles => :web do
     run "mkdir -p #{shared_path}/config"
     run "mkdir -p #{shared_path}/media"
+    run "mkdir -p #{shared_path}/plugins"
 
     put "RewriteEngine On\nRewriteRule (.*) current/$1\n", "#{deploy_to}/.htaccess"
     put "", "#{shared_path}/config/htaccess"
